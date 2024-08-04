@@ -15,6 +15,7 @@ from os import getenv
 import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm.exc import NoResultFound
 
 classes = {"Amenity": Amenity, "City": City,
            "Place": Place, "Review": Review, "State": State, "User": User}
@@ -39,6 +40,15 @@ class DBStorage:
                                              HBNB_MYSQL_DB))
         if HBNB_ENV == "test":
             Base.metadata.drop_all(self.__engine)
+        self.__session = scoped_session(sessionmaker(bind=self.__engine))
+        self.classes = {
+            'amenities': Amenity,
+            'cities': City,
+            'places': Place,
+            'reviews': Review,
+            'states': State,
+            'users': User
+        }
 
     def all(self, cls=None):
         """query on the current database session"""
@@ -67,10 +77,29 @@ class DBStorage:
     def reload(self):
         """reloads data from the database"""
         Base.metadata.create_all(self.__engine)
-        sess_factory = sessionmaker(bind=self.__engine, expire_on_commit=False)
-        Session = scoped_session(sess_factory)
-        self.__session = Session
+        self.__session.remove()
 
     def close(self):
         """call remove() method on the private session attribute"""
         self.__session.remove()
+
+    def get(self, cls, id):
+        """Retrieve one object based on class and its ID."""
+        if cls is None or id is None:
+            return None
+        try:
+            return self.session.query(cls).filter_by(id=id).one()
+        except NoResultFound:
+            return None
+
+    def count(self, cls=None):
+        """Count the number of objects in storage for a given class."""
+        if cls is None:
+            counts = {key: self.session.query(value).count() for key, value in self.classes.items()}
+            print("Counts:", counts)  # Debug output
+            return counts
+        return self.session.query(cls).count()
+
+    @property
+    def session(self):
+        return self.__session
