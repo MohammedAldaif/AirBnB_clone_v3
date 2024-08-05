@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 """ objects that handle all default RestFul API actions for States """
 
-
 from models.state import State
 from models import storage
 from api.v1.views import app_views
 from flask import abort, jsonify, make_response, request
+
 
 @app_views.route('/states', methods=['GET'], strict_slashes=False)
 def get_states():
@@ -13,9 +13,7 @@ def get_states():
     Retrieves the list of all State objects
     """
     all_states = storage.all(State).values()
-    list_states = []
-    for state in all_states:
-        list_states.append(state.to_dict())
+    list_states = [state.to_dict() for state in all_states]
     return jsonify(list_states)
 
 
@@ -25,7 +23,6 @@ def get_state(state_id):
     state = storage.get(State, state_id)
     if not state:
         abort(404)
-
     return jsonify(state.to_dict())
 
 
@@ -35,15 +32,11 @@ def delete_state(state_id):
     """
     Deletes a State Object
     """
-
     state = storage.get(State, state_id)
-
     if not state:
         abort(404)
-
     storage.delete(state)
     storage.save()
-
     return make_response(jsonify({}), 200)
 
 
@@ -54,13 +47,13 @@ def post_state():
     """
     if not request.get_json():
         abort(400, description="Not a JSON")
-
-    if 'name' not in request.get_json():
-        abort(400, description="Missing name")
-
     data = request.get_json()
+    if 'name' not in data:
+        abort(400, description="Missing name")
     instance = State(**data)
-    instance.save()
+    storage.new(instance)  # Add to session
+    storage.save()  # Commit changes
+    print(storage.all(State))
     return make_response(jsonify(instance.to_dict()), 201)
 
 
@@ -70,18 +63,15 @@ def put_state(state_id):
     Updates a State
     """
     state = storage.get(State, state_id)
-
     if not state:
         abort(404)
-
     if not request.get_json():
         abort(400, description="Not a JSON")
-
-    ignore = ['id', 'created_at', 'updated_at']
-
     data = request.get_json()
+    ignore = ['id', 'created_at', 'updated_at']
     for key, value in data.items():
         if key not in ignore:
             setattr(state, key, value)
-    storage.save()
+    storage.save()  # Commit changes
+    print(storage.all(State))
     return make_response(jsonify(state.to_dict()), 200)
