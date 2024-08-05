@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 """ holds class State"""
+
+
 import models
 from models.base_model import BaseModel, Base
 from models.city import City
@@ -32,3 +34,9 @@ class State(BaseModel, Base):
                 if city.state_id == self.id:
                     city_list.append(city)
             return city_list
+
+    def to_dict(self):
+        """Converts the object to a dictionary"""
+        dictionary = super().to_dict()
+        dictionary['__class__'] = self.__class__.__name__
+        return dictionary
